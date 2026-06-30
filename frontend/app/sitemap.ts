@@ -10,7 +10,7 @@ const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ||
   (process.env.VERCEL_PROJECT_PRODUCTION_URL
     ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-    : "https://game-vault-nine-kappa.vercel.app");
+    : "https://game-vault-02.vercel.app");
 
 function safeDate(value: unknown): Date {
   if (!value) return new Date();
