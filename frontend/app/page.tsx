@@ -10,25 +10,29 @@ export const revalidate = 60;
 
 export default async function Home() {
   const [contentTypes, platforms, settings] = await Promise.all([
-    fetchContentTypesServer(),
-    fetchPlatformsServer(),
+    fetchContentTypesServer().catch(() => []),
+    fetchPlatformsServer().catch(() => []),
     fetchSettingsServer().catch(() => ({})),
   ]);
 
   // Fetch content for all content types in parallel
   const allTypeContent = await Promise.all(
     contentTypes.map(async (type) => {
-      const [trendingRes, latestRes, popularRes] = await Promise.all([
-        fetchContentByTypeServer(type.slug, { limit: 6, filters: { isTrending: "true" }, sort: "newest" }),
-        fetchContentByTypeServer(type.slug, { limit: 12, sort: "newest" }),
-        fetchContentByTypeServer(type.slug, { limit: 12, filters: { isPopular: "true" }, sort: "downloads" }),
-      ]);
-      return {
-        type,
-        trending: trendingRes.data,
-        latest: latestRes.data,
-        popular: popularRes.data,
-      };
+      try {
+        const [trendingRes, latestRes, popularRes] = await Promise.all([
+          fetchContentByTypeServer(type.slug, { limit: 6, filters: { isTrending: "true" }, sort: "newest" }),
+          fetchContentByTypeServer(type.slug, { limit: 12, sort: "newest" }),
+          fetchContentByTypeServer(type.slug, { limit: 12, filters: { isPopular: "true" }, sort: "downloads" }),
+        ]);
+        return {
+          type,
+          trending: trendingRes.data,
+          latest: latestRes.data,
+          popular: popularRes.data,
+        };
+      } catch {
+        return { type, trending: [], latest: [], popular: [] };
+      }
     })
   );
 

@@ -130,6 +130,7 @@ export async function fetchSettings(): Promise<Record<string, string>> {
 async function fetchApiISR<T>(path: string, revalidate = 60, tags?: string[]): Promise<T> {
   const res = await fetch(`${API_BASE}/public${path}`, {
     next: { revalidate, tags },
+    signal: AbortSignal.timeout(15000),
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
