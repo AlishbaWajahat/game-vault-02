@@ -118,7 +118,7 @@ export default function ContentDetailClient({ content, contentTypeSlug, initialR
           <div className="space-y-3 w-full max-w-[400px] mx-auto min-[600px]:hidden mb-6">
             <div className="relative">
               <div className="w-1/2">
-                <div className="relative aspect-[3/4] overflow-hidden bg-[#444444] border border-[#666666] shadow-[0_8px_32px_rgba(0,0,0,0.15)]">
+                <div className="relative aspect-[3/4] overflow-hidden bg-[#444444] shadow-[0_8px_32px_rgba(0,0,0,0.15)]">
                   <Image
                     src={content.coverImage || FALLBACK_COVER}
                     alt={content.title}
@@ -141,7 +141,7 @@ export default function ContentDetailClient({ content, contentTypeSlug, initialR
                     <button
                       key={i}
                       onClick={(e) => { e.stopPropagation(); openLightbox(i); }}
-                      className="relative block w-full aspect-video overflow-hidden bg-[#444444] border border-[#666666] hover:border-[#468284]/40 transition-all cursor-pointer"
+                      className="relative block w-full aspect-video overflow-hidden bg-[#444444] transition-all cursor-pointer"
                     >
                       <Image src={s} alt={`Screenshot ${i + 1}`} fill sizes="(max-width: 600px) 45vw, 300px" className="object-cover pointer-events-none" />
                     </button>
@@ -162,7 +162,7 @@ export default function ContentDetailClient({ content, contentTypeSlug, initialR
             <div className="hidden min-[600px]:block space-y-3">
               <div className="relative">
                 <div className="w-full">
-                  <div className="relative aspect-[3/4] overflow-hidden bg-[#444444] border border-[#666666] shadow-[0_8px_32px_rgba(0,0,0,0.15)]">
+                  <div className="relative aspect-[3/4] overflow-hidden bg-[#444444] shadow-[0_8px_32px_rgba(0,0,0,0.15)]">
                     <Image
                       src={content.coverImage || FALLBACK_COVER}
                       alt={content.title}
@@ -323,7 +323,7 @@ export default function ContentDetailClient({ content, contentTypeSlug, initialR
               <button
                 key={i}
                 onClick={() => openLightbox(i)}
-                className="relative aspect-video overflow-hidden bg-[#444444] border border-[#666666] hover:border-[#468284]/40 transition-all shrink-0 w-[240px] sm:w-[320px]"
+                className="relative aspect-video overflow-hidden bg-[#444444] transition-all shrink-0 w-[240px] sm:w-[320px]"
               >
                 <Image
                   src={s}
