@@ -1,0 +1,420 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Enums ──
+
+enum Role {
+  SUPER_ADMIN
+  CONTENT_MANAGER
+  GAME_MANAGER
+}
+
+enum UploadStatus {
+  PENDING
+  UPLOADING
+  COMPLETE
+  FAILED
+}
+
+enum RequestStatus {
+  PENDING
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  AVAILABLE
+}
+
+enum MessageStatus {
+  UNREAD
+  READ
+  REPLIED
+  ARCHIVED
+}
+
+enum FieldType {
+  TEXT
+  TEXTAREA
+  RICH_TEXT
+  NUMBER
+  BOOLEAN
+  URL
+  IMAGE
+  IMAGE_ARRAY
+  TEXT_ARRAY
+  SELECT
+  MULTI_SELECT
+  RATING
+  DATE
+}
+
+// ── Auth Models (unchanged) ──
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role     @default(GAME_MANAGER)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// ── Site Model ──
+
+model Site {
+  id          String   @id @default(cuid())
+  siteId      String   @unique
+  name        String
+  domain      String?
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  contentSites    ContentSite[]
+  platformSites   PlatformSite[]
+  categorySites   CategorySite[]
+  settings        SiteSetting[]
+  downloadLogs    DownloadLog[]
+  articles        Article[]
+  contactMessages ContactMessage[]
+  contentRequests ContentRequest[]
+  auditLogs       AuditLog[]
+
+  @@map("sites")
+}
+
+// ── Content Type System ──
+
+model ContentType {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  icon        String?
+  description String?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  fields           ContentTypeField[]
+  contents         Content[]
+  categories       Category[]
+  platformTypes    PlatformContentType[]
+  requests         ContentRequest[]
+
+  @@map("content_types")
+}
+
+model ContentTypeField {
+  id            String    @id @default(cuid())
+  contentTypeId String
+  slug          String
+  name          String
+  fieldType     FieldType
+  isRequired    Boolean   @default(false)
+  defaultValue  Json?
+  options       Json?
+  placeholder   String?
+  helpText      String?
+  sortOrder     Int       @default(0)
+  group         String    @default("general")
+  showInList    Boolean   @default(false)
+  showInDetail  Boolean   @default(true)
+  isFilterable  Boolean   @default(false)
+  isSortable    Boolean   @default(false)
+  validation    Json?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  contentType ContentType @relation(fields: [contentTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([contentTypeId, slug])
+  @@index([contentTypeId])
+  @@map("content_type_fields")
+}
+
+// ── Content Model (replaces Game) ──
+
+model Content {
+  id              String   @id @default(cuid())
+  contentTypeId   String
+  slug            String   @unique
+  title           String
+  coverImage      String   @default("")
+  description     String?
+  fields          Json     @default("{}")
+  downloads       Int      @default(0)
+  popularity      Int      @default(0)
+  isPublished     Boolean  @default(true)
+  metaTitle       String?
+  metaDescription String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  contentType  ContentType       @relation(fields: [contentTypeId], references: [id])
+  sites        ContentSite[]
+  platforms    ContentPlatform[]
+  files        ContentFile[]
+  downloadLogs DownloadLog[]
+
+  @@index([contentTypeId])
+  @@index([isPublished])
+  @@map("contents")
+}
+
+// ── Junction Tables ──
+
+model ContentSite {
+  contentId String
+  siteId    String
+
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  site    Site    @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@id([contentId, siteId])
+  @@map("content_sites")
+}
+
+model ContentPlatform {
+  contentId  String
+  platformId String
+
+  content  Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  platform Platform @relation(fields: [platformId], references: [id], onDelete: Cascade)
+
+  @@id([contentId, platformId])
+  @@map("content_platforms")
+}
+
+model PlatformContentType {
+  platformId    String
+  contentTypeId String
+
+  platform    Platform    @relation(fields: [platformId], references: [id], onDelete: Cascade)
+  contentType ContentType @relation(fields: [contentTypeId], references: [id], onDelete: Cascade)
+
+  @@id([platformId, contentTypeId])
+  @@map("platform_content_types")
+}
+
+model PlatformSite {
+  platformId String
+  siteId     String
+
+  platform Platform @relation(fields: [platformId], references: [id], onDelete: Cascade)
+  site     Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@id([platformId, siteId])
+  @@map("platform_sites")
+}
+
+model CategorySite {
+  categoryId String
+  siteId     String
+
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  site     Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@id([categoryId, siteId])
+  @@map("category_sites")
+}
+
+// ── Content File (replaces GameFile) ──
+
+model ContentFile {
+  id           String       @id @default(cuid())
+  contentId    String
+  fileName     String
+  storageKey   String
+  fileSize     BigInt       @default(0)
+  checksum     String?
+  uploadStatus UploadStatus @default(PENDING)
+  uploadId     String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@index([contentId])
+  @@map("content_files")
+}
+
+// ── Platform (modified) ──
+
+model Platform {
+  id        String  @id @default(cuid())
+  slug      String  @unique
+  name      String
+  classic   Boolean @default(false)
+  icon      String?
+  color     String?
+  sortOrder Int     @default(0)
+
+  contents     ContentPlatform[]
+  contentTypes PlatformContentType[]
+  sites        PlatformSite[]
+
+  @@map("platforms")
+}
+
+// ── Category (modified — now per content type) ──
+
+model Category {
+  id            String  @id @default(cuid())
+  slug          String  @unique
+  name          String
+  icon          String?
+  description   String?
+  contentTypeId String?
+
+  contentType ContentType? @relation(fields: [contentTypeId], references: [id], onDelete: SetNull)
+  sites       CategorySite[]
+
+  @@index([contentTypeId])
+  @@map("categories")
+}
+
+// ── Download Log (modified) ──
+
+model DownloadLog {
+  id        String   @id @default(cuid())
+  contentId String
+  siteId    String?
+  ipHash    String
+  country   String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  site    Site?   @relation(fields: [siteId], references: [id], onDelete: SetNull)
+
+  @@index([contentId])
+  @@index([siteId])
+  @@index([createdAt])
+  @@map("download_logs")
+}
+
+// ── Content Request (replaces GameRequest) ──
+
+model ContentRequest {
+  id            String        @id @default(cuid())
+  title         String
+  platform      String
+  contentTypeId String?
+  status        RequestStatus @default(PENDING)
+  ipHash        String?
+  siteId        String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  contentType ContentType? @relation(fields: [contentTypeId], references: [id], onDelete: SetNull)
+  site        Site?        @relation(fields: [siteId], references: [id], onDelete: SetNull)
+
+  @@index([contentTypeId])
+  @@index([siteId])
+  @@map("content_requests")
+}
+
+// ── Site Settings (modified — scoped to site) ──
+
+model SiteSetting {
+  id     String  @id @default(cuid())
+  key    String
+  value  String
+  group  String  @default("general")
+  siteId String?
+
+  site Site? @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([key, siteId])
+  @@index([siteId])
+  @@map("site_settings")
+}
+
+// ── Unchanged Models ──
+
+model Article {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  title           String
+  body            String
+  category        String
+  date            String?
+  author          String?
+  excerpt         String?
+  image           String?
+  isPublished     Boolean  @default(true)
+  metaTitle       String?
+  metaDescription String?
+  siteId          String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  site Site? @relation(fields: [siteId], references: [id], onDelete: SetNull)
+
+  @@index([siteId])
+  @@map("articles")
+}
+
+model ContactMessage {
+  id        String        @id @default(cuid())
+  name      String
+  email     String
+  subject   String
+  message   String
+  status    MessageStatus @default(UNREAD)
+  siteId    String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  site Site? @relation(fields: [siteId], references: [id], onDelete: SetNull)
+
+  @@index([siteId])
+  @@map("contact_messages")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  entity    String
+  entityId  String?
+  details   Json?
+  siteId    String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  site Site? @relation(fields: [siteId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([entity])
+  @@index([siteId])
+  @@map("audit_logs")
+}
